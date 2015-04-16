@@ -29,22 +29,23 @@
     NSDictionary *attributes = @{NSFontAttributeName: font};
     NSAttributedString *attributedString = [NSAttributedString emotionAttributedStringFrom:emojiString attributes:attributes];
     
-    CGRect attributeRect = [attributedString boundsWithSize:CGSizeMake(kScreenWidth - 30,CGFLOAT_MAX)];
+    KZLinkLabel *kzLabel = [[KZLinkLabel alloc] initWithFrame:CGRectMake(15, 40, kScreenWidth - 30, 0)];
     
-    KZLinkLabel *kzLabel = [[KZLinkLabel alloc] initWithFrame:CGRectMake(15, 40, kScreenWidth - 30, attributeRect.size.height)];
     kzLabel.automaticLinkDetectionEnabled = YES;
     kzLabel.font = [UIFont systemFontOfSize:16];
-    kzLabel.backgroundColor = [UIColor clearColor];
+    kzLabel.backgroundColor = [UIColor redColor];
     kzLabel.textColor = [UIColor blackColor];
     kzLabel.numberOfLines = 0;
     kzLabel.lineBreakMode = NSLineBreakByTruncatingTail;
     kzLabel.attributedText = attributedString;
+    kzLabel.lineSpacing = 30;
     
-    [kzLabel sizeToFit];
     kzLabel.linkColor = [UIColor blueColor];
     kzLabel.linkHighlightColor = [UIColor orangeColor];
     
     [self.view addSubview:kzLabel];
+    
+    [kzLabel sizeToFit];
     
     kzLabel.linkTapHandler = ^(KZLinkType linkType, NSString *string, NSRange range){
         if (linkType == KZLinkTypeURL) {

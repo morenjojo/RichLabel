@@ -42,6 +42,8 @@ typedef void (^KZLinkHandler)(KZLinkType linkType, NSString *string, NSRange ran
 
 @property (nonatomic, strong) UIColor *linkBackgroundColor;
 
+@property (nonatomic, assign) CGFloat lineSpacing;
+
 @property (nonatomic, assign) KZLinkDetectionTypes linkDetectionTypes;
 
 @property (nonatomic, copy) KZLinkHandler linkTapHandler;

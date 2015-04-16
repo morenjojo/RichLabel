@@ -308,6 +308,9 @@
     //段落属性
     NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
     paragraph.alignment = self.textAlignment;
+    if (self.lineSpacing > 0) {
+        paragraph.lineSpacing = self.lineSpacing;
+    }
     
     //属性字典
     NSDictionary *attributes = @{
@@ -487,6 +490,25 @@
     }
     return rangesForPhoneNumbers;
 }
+
+#pragma mark - override
+- (CGSize)intrinsicContentSize {
+    if (self.textStorage) {
+        CGRect attributeRect = [self.textStorage boundsWithSize:CGSizeMake(self.textContainer.size.width, CGFLOAT_MAX)];
+        return attributeRect.size;
+    }
+    return [super intrinsicContentSize];
+}
+
+- (CGSize)sizeThatFits:(CGSize)size {
+    if (self.textStorage) {
+        CGRect attributeRect = [self.textStorage boundsWithSize:CGSizeMake(size.width, CGFLOAT_MAX)];
+        return CGSizeMake(size.width, attributeRect.size.height);
+    }
+    
+    return size;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark - Layout and Rendering
 /*

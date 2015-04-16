@@ -18,6 +18,8 @@
 
 @property (nonatomic, copy) NSArray *linkRanges;
 
+@property (nonatomic, strong) NSMutableArray *customLinksDicArray;
+
 @property (nonatomic, assign) BOOL isTouchMoved;
 
 @property (nonatomic, assign) NSRange selectedRange;
@@ -306,7 +308,7 @@
     }
     
     //段落属性
-    NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
+    NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle defaultParagraphStyle] mutableCopy];
     paragraph.alignment = self.textAlignment;
     if (self.lineSpacing > 0) {
         paragraph.lineSpacing = self.lineSpacing;
@@ -370,6 +372,10 @@
     if (self.linkDetectionTypes & KZLinkDetectionTypePhoneNumber)
     {
         [rangesForLinks addObjectsFromArray:[self getRangesForPhoneNumbers:text.string]];
+    }
+    // 用户自定
+    if (self.linkDetectionTypes & KZLinkDetectionTypeCustom) {
+        [rangesForLinks addObjectsFromArray:self.customLinksDicArray];
     }
     //......
     
@@ -489,6 +495,35 @@
         }
     }
     return rangesForPhoneNumbers;
+}
+
+#pragma mark - public methods
+- (NSMutableArray *)customLinksDicArray {
+    if (!_customLinksDicArray) {
+        _customLinksDicArray = [[NSMutableArray alloc] init];
+    }
+    return _customLinksDicArray;
+}
+/*
+ @{
+ @"linkType" : @(KZLinkTypeUserHandle),
+ @"range"    : [NSValue valueWithRange:matchRange],
+ @"link"     : matchString
+ }
+ */
+- (void)addlinkWithLinkDisplayString:(NSString *)displayString linkUrlString:(NSString *)urlString atPostionIndex:(NSUInteger)pos {
+    if (displayString.length > 0 && urlString.length > 0 && pos < self.textStorage.length) {
+        [self.customLinksDicArray addObject:@{
+                                              @"linkType": @(KZLinkTypeCustom),
+                                              @"range": [NSValue valueWithRange:NSMakeRange(pos, displayString.length)],
+                                              @"link": urlString
+                                              }];
+        
+        NSMutableAttributedString *originAttr = [self.textStorage mutableCopy];
+        [originAttr insertAttributedString:[[NSAttributedString alloc] initWithString:displayString] atIndex:pos];
+        
+        self.attributedText = originAttr;
+    }
 }
 
 #pragma mark - override

@@ -33,15 +33,18 @@
     
     kzLabel.automaticLinkDetectionEnabled = YES;
     kzLabel.font = [UIFont systemFontOfSize:16];
-    kzLabel.backgroundColor = [UIColor redColor];
+    kzLabel.backgroundColor = [UIColor clearColor];
     kzLabel.textColor = [UIColor blackColor];
     kzLabel.numberOfLines = 0;
     kzLabel.lineBreakMode = NSLineBreakByTruncatingTail;
     kzLabel.attributedText = attributedString;
-    kzLabel.lineSpacing = 30;
+    kzLabel.lineSpacing = 10;
+    kzLabel.linkBackgroundColor = [UIColor clearColor];
     
     kzLabel.linkColor = [UIColor blueColor];
     kzLabel.linkHighlightColor = [UIColor orangeColor];
+    
+    [kzLabel addlinkWithLinkDisplayString:@"百度" linkUrlString:@"http://www.baidu.com" atPostionIndex:0];
     
     [self.view addSubview:kzLabel];
     
@@ -53,7 +56,7 @@
         } else if (linkType == KZLinkTypePhoneNumber) {
             [self openTel:string];
         } else {
-            NSLog(@"Other Link");
+            NSLog(@"Other Link\n%@", string);
         }
     };
     kzLabel.linkLongPressHandler = ^(KZLinkType linkType, NSString *string, NSRange range){

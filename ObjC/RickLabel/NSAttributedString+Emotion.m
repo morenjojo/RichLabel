@@ -13,7 +13,7 @@
 - (CGRect)attachmentBoundsForTextContainer:(NSTextContainer *)textContainer proposedLineFragment:(CGRect)lineFrag glyphPosition:(CGPoint)position characterIndex:(NSUInteger)charIndex
 {
     //return CGRectMake( 0 , 0 , lineFrag.size.height + 6, lineFrag.size.height + 6);
-    return CGRectMake( 0 , -5, 19, 20);
+    return CGRectMake( 0 , -5, 20, 20);
 }
 @end
 
@@ -25,7 +25,7 @@
  */
 - (CGRect)boundsWithSize:(CGSize)size
 {
-    CGRect contentRect = [self boundingRectWithSize:size options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading context:nil];
+    CGRect contentRect = [self boundingRectWithSize:size options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading context:nil];//NSStringDrawingUsesLineFragmentOrigin
     return contentRect;
 }
 
@@ -33,9 +33,14 @@
 /*
  * 返回表情数组
  */
-+ (NSArray *)emojiStringArray
-{
-    return [NSArray arrayWithObjects:@"[不服]",@"[亲亲]",@"[偷笑]",@"[加油]",@"[卖萌]",@"[吐了]",@"[大哭]",@"[大笑]",@"[好色]",@"[害羞]",@"[屌爆了]",@"[帅气]",@"[微笑]",@"[快哭了]",@"[惊恐]",@"[惊讶]",@"[愤怒]",@"[打死你]",@"[抓狂]",@"[抱抱]",@"[挖鼻孔]",@"[摸头]",@"[晕]",@"[求你了]",@"[求包养]",@"[流汗]",@"[淘气]",@"[猥琐]",@"[生气]",@"[白眼]",@"[给跪]",@"[鄙视]",@"[闭嘴]",@"[阴险]",@"[难过]",nil];
++ (NSArray *)emojiStringArray {
+    static NSArray *arr = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSString *filePath = [[NSBundle mainBundle] pathForResource:@"Emotions" ofType:@"plist"];
+        arr = [[NSArray alloc] initWithContentsOfFile:filePath];
+    });
+    return arr;
 }
 
 /*
@@ -44,7 +49,7 @@
 + (CGRect)boundsForString:(NSString *)string size:(CGSize)size attributes:(NSDictionary *)attrs
 {
     NSAttributedString *attributedString = [NSAttributedString emotionAttributedStringFrom:string attributes:attrs];
-    CGRect contentRect = [attributedString boundingRectWithSize:size options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading context:nil];
+    CGRect contentRect = [attributedString boundingRectWithSize:size options: NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading context:nil];
     return contentRect;
 }
 
@@ -91,6 +96,7 @@
             if ([s isEqualToString:markR] || (i == string.length - 1))
             {
                 NSMutableString *emojiStr = [[NSMutableString alloc] init];
+                
                 for (NSString *c in stack)
                 {
                     [emojiStr appendString:c];
@@ -103,7 +109,7 @@
                     [attributedString replaceCharactersInRange:range withString:@" "];
                     KZTextAttachment *attachment = [[KZTextAttachment alloc] initWithData:nil ofType:nil];
                     attachment.range = NSMakeRange(i + 1 - emojiStr.length, 1);
-                    attachment.image = [UIImage imageNamed:[NSString stringWithFormat:@"%@.png",emojiStr]];
+                    attachment.image = [UIImage imageNamed:[NSString stringWithFormat:@"%@.png",[emojiStr substringWithRange:NSMakeRange(1, emojiStr.length - 2)]]];
                     
                     i -= ([stack count] - 1);
                     [array addObject:attachment];

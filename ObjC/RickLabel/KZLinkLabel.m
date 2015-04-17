@@ -18,6 +18,8 @@
 
 @property (nonatomic, copy) NSArray *linkRanges;
 
+@property (nonatomic, strong) NSMutableArray *customLinksDicArray;
+
 @property (nonatomic, assign) BOOL isTouchMoved;
 
 @property (nonatomic, assign) NSRange selectedRange;
@@ -63,27 +65,39 @@
 - (void)setText:(NSString *)text
 {
     [super setText:text];
-    NSAttributedString *attributedText = [[NSAttributedString alloc] initWithString:text
-                                                                         attributes:[self attributesFromProperties]];
-    [self updateTextStoreWithAttributedString:attributedText];
+    self.customLinksDicArray = nil;
+    
+    if (text) {
+        NSAttributedString *attributedText = [[NSAttributedString alloc] initWithString:text
+                                                                             attributes:[self attributesFromProperties]];
+        [self updateTextStoreWithAttributedString:attributedText];
+    }
 }
 
 - (void)setAttributedText:(NSAttributedString *)attributedText
 {
     [super setAttributedText:attributedText];
-    [self updateTextStoreWithAttributedString:attributedText];
+    self.customLinksDicArray = nil;
+    
+    if (attributedText) {
+        NSMutableAttributedString *mutableAttributeString = [[NSMutableAttributedString alloc] initWithAttributedString:attributedText];
+        [mutableAttributeString addAttributes:[self attributesFromProperties] range:NSMakeRange(0, mutableAttributeString.length)];
+        [self updateTextStoreWithAttributedString:mutableAttributeString];
+    }
 }
+
 - (void)layoutSubviews
 {
     [super layoutSubviews];
     self.textContainer.size = self.bounds.size;
 }
+
 - (void)setupTextSystem
 {
     self.textContainer = [[NSTextContainer alloc] init];
     self.textContainer.lineFragmentPadding = 0;
-    self.textContainer.maximumNumberOfLines = self.numberOfLines;
-    self.textContainer.lineBreakMode = self.lineBreakMode;
+    self.textContainer.maximumNumberOfLines = 0;//self.numberOfLines;
+    self.textContainer.lineBreakMode = NSLineBreakByTruncatingTail;//self.lineBreakMode;
     self.textContainer.size = self.frame.size;
     
     self.layoutManager = [[NSLayoutManager alloc] init];
@@ -216,7 +230,9 @@
 {
     if (self.attributedText)
     {
-        [self updateTextStoreWithAttributedString:self.attributedText];
+        NSMutableAttributedString *mutableAttributeString = [[NSMutableAttributedString alloc] initWithAttributedString:self.attributedText];
+        [mutableAttributeString addAttributes:[self attributesFromProperties] range:NSMakeRange(0, mutableAttributeString.length)];
+        [self updateTextStoreWithAttributedString:mutableAttributeString];
     }
     else if (self.text)
     {
@@ -284,7 +300,7 @@
 - (NSDictionary *)attributesFromProperties
 {
     //阴影属性
-    NSShadow *shadow = shadow = [[NSShadow alloc] init];
+    NSShadow *shadow = [[NSShadow alloc] init];
     if (self.shadowColor){
         shadow.shadowColor = self.shadowColor;
         shadow.shadowOffset = self.shadowOffset;
@@ -302,8 +318,11 @@
     }
     
     //段落属性
-    NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
+    NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle defaultParagraphStyle] mutableCopy];
     paragraph.alignment = self.textAlignment;
+    if (self.lineSpacing > 0) {
+        paragraph.lineSpacing = self.lineSpacing;
+    }
     
     //属性字典
     NSDictionary *attributes = @{
@@ -363,6 +382,10 @@
     if (self.linkDetectionTypes & KZLinkDetectionTypePhoneNumber)
     {
         [rangesForLinks addObjectsFromArray:[self getRangesForPhoneNumbers:text.string]];
+    }
+    // 用户自定
+    if (self.linkDetectionTypes & KZLinkDetectionTypeCustom) {
+        [rangesForLinks addObjectsFromArray:self.customLinksDicArray];
     }
     //......
     
@@ -483,6 +506,58 @@
     }
     return rangesForPhoneNumbers;
 }
+
+#pragma mark - public methods
+- (NSMutableArray *)customLinksDicArray {
+    if (!_customLinksDicArray) {
+        _customLinksDicArray = [[NSMutableArray alloc] init];
+    }
+    return _customLinksDicArray;
+}
+/*
+ @{
+ @"linkType" : @(KZLinkTypeUserHandle),
+ @"range"    : [NSValue valueWithRange:matchRange],
+ @"link"     : matchString
+ }
+ */
+- (void)addlinkWithLinkDisplayString:(NSString *)displayString linkUrlString:(NSString *)urlString atPostionIndex:(NSUInteger)pos {
+    if (displayString.length > 0 && urlString.length > 0 && pos < self.textStorage.length) {
+        [self.customLinksDicArray addObject:@{
+                                              @"linkType": @(KZLinkTypeCustom),
+                                              @"range": [NSValue valueWithRange:NSMakeRange(pos, displayString.length)],
+                                              @"link": urlString
+                                              }];
+        
+        NSMutableAttributedString *originAttr = [self.textStorage mutableCopy];
+        [originAttr insertAttributedString:[[NSAttributedString alloc] initWithString:displayString] atIndex:pos];
+        
+        NSMutableAttributedString *mutableAttributeString = [[NSMutableAttributedString alloc] initWithAttributedString:originAttr];
+        [mutableAttributeString addAttributes:[self attributesFromProperties] range:NSMakeRange(0, mutableAttributeString.length)];
+        [self updateTextStoreWithAttributedString:mutableAttributeString];
+    }
+}
+
+#pragma mark - override
+- (CGSize)intrinsicContentSize {
+    if (self.textStorage) {
+        
+        CGRect attributeRect = [self.textStorage boundsWithSize:CGSizeMake(self.width, CGFLOAT_MAX)];
+        return CGSizeMake(self.width, attributeRect.size.height + self.lineSpacing);
+    }
+    return [super intrinsicContentSize];
+}
+
+- (CGSize)sizeThatFits:(CGSize)size {
+    if (self.textStorage) {
+
+        CGRect attributeRect = [self.textStorage boundsWithSize:CGSizeMake(size.width, CGFLOAT_MAX)];
+        return CGSizeMake(size.width, attributeRect.size.height + self.lineSpacing);
+    }
+    
+    return size;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark - Layout and Rendering
 /*
@@ -540,14 +615,14 @@
 - (CGPoint)calcTextOffsetForGlyphRange:(NSRange)glyphRange
 {
     CGPoint textOffset = CGPointZero;
-    
+    /*
     CGRect textBounds = [self.layoutManager boundingRectForGlyphRange:glyphRange inTextContainer:self.textContainer];
     CGFloat paddingHeight = (self.bounds.size.height - textBounds.size.height) / 2.0f;
     if (paddingHeight > 0)
     {
         textOffset.y = paddingHeight;
     }
-    
+    */
     return textOffset;
 }
 #pragma mark - Layout manager delegate
